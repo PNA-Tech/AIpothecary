@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:healthassistant/screens/home.dart';
 import 'package:healthassistant/util/auth.dart';
+import 'package:healthassistant/screens/home.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -24,7 +24,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
+          MaterialPageRoute(
+              builder: (context) => HomeScreen(name: _nameController.text)),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -38,7 +39,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign Up'),
+        title: const Text('Sign Up'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -48,7 +49,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             children: <Widget>[
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Name'),
+                decoration: const InputDecoration(labelText: 'Name'),
                 validator: (value) {
                   if (value!.isEmpty) {
                     return 'Please enter your name';
@@ -58,7 +59,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email'),
                 validator: (value) {
                   if (value!.isEmpty) {
                     return 'Please enter your email';
@@ -68,7 +69,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 validator: (value) {
                   if (value!.isEmpty) {
@@ -77,10 +78,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _signUp,
-                child: Text('Sign Up'),
+                child: const Text('Sign Up'),
               ),
             ],
           ),

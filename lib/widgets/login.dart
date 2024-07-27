@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pocketbase/pocketbase.dart';
-import 'package:healthassistant/screens/home.dart';
+import '../screens/home.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -16,13 +18,17 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await pb.collection('users').authWithPassword(
+        final authResponse = await pb.collection('users').authWithPassword(
               _emailController.text,
               _passwordController.text,
             );
+
+        final user = authResponse.record;
+        final userName = user?.getStringValue('name') ?? 'User'; 
+
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
+          MaterialPageRoute(builder: (context) => HomeScreen(name: userName)),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -36,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login'),
+        title: const Text('Login'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -46,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: <Widget>[
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: 'Email'),
                 validator: (value) {
                   if (value!.isEmpty) {
                     return 'Please enter your email';
@@ -56,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 validator: (value) {
                   if (value!.isEmpty) {
@@ -65,20 +71,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
-                    onPressed: _login,
-                    child: Text('Login'),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10, left: 10),
+                    child: ElevatedButton(
+                      onPressed: _login,
+                      child: const Text('Login'),
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pushNamed(context, '/signup');
                     },
-                    child: Text('Not a member? Sign Up'),
+                    child: const Text('Not a member? Sign Up'),
                   ),
                 ],
               )

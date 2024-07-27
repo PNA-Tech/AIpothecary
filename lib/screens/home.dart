@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  final String name;
 
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
+  const HomeScreen({super.key, required this.name});
 
-class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Health Assistant"),
+        title: Text('👋 $name'),
         backgroundColor: Colors.cyanAccent[200],
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.pushNamed(context, '/add_medicine');
+          },
+          child: const Text('Add Medicine'),
+        ),
       ),
     );
   }

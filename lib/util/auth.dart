@@ -22,4 +22,14 @@ class AuthService {
   Future<bool> isAuthenticated() async {
     return pb.authStore.isValid;
   }
+
+  Future<String?> getCurrentUserId() async {
+    final user = pb.authStore.model;
+    return user?.id;
+  }
+
+  Future<String?> getCurrentUserName() async {
+    final user = pb.authStore.model;
+    return user?.getString('name');
+  }
 }

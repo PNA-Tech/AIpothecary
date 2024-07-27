@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthassistant/screens/add_medicine.dart';
 import 'package:healthassistant/screens/home.dart';
 import 'package:healthassistant/widgets/login.dart';
 import 'package:healthassistant/widgets/signup.dart';
@@ -17,6 +18,7 @@ class _MyAppState extends State<MyApp> {
   final AuthService _authService = AuthService();
   bool _isAuthenticated = false;
   bool _isLoading = true;
+  String _userName = '';
 
   @override
   void initState() {
@@ -26,6 +28,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _checkAuthentication() async {
     _isAuthenticated = await _authService.isAuthenticated();
+    if (_isAuthenticated) {
+      _userName = (await _authService.getCurrentUserName())!;
+    }
     setState(() {
       _isLoading = false;
     });
@@ -35,14 +40,15 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : _isAuthenticated
-              ? HomeScreen()
-              : LoginScreen(),
+              ? HomeScreen(name: _userName)
+              : const LoginScreen(),
       routes: {
         '/signup': (context) => SignUpScreen(),
-        '/login': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/home': (context) => HomeScreen(name: _userName),
+        '/add_medicine': (context) => const AddMedicine(),
       },
     );
   }
