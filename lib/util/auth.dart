@@ -1,7 +1,7 @@
 import 'package:pocketbase/pocketbase.dart';
 
 class AuthService {
-  final pb = PocketBase('http://127.0.0.1:8090');
+  final pb = PocketBase('https://region-generally.pockethost.io/');
 
   Future<void> signUp(String name, String email, String password) async {
     try {

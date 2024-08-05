@@ -13,7 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final pb = PocketBase('http://127.0.0.1:8090');
+  final pb = PocketBase('https://region-generally.pockethost.io/');
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
