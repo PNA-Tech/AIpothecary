@@ -9,41 +9,41 @@ class AddMedicine extends StatefulWidget {
 }
 
 class _AddMedicineState extends State<AddMedicine> {
-  final _medicineNameController = TextEditingController();
-  final _frequencyController = TextEditingController();
-  final List<Map<String, String>> _medicines = [];
+  final List<Map<String, dynamic>> _medicines = [];
   int? _editingIndex;
   final _formKey = GlobalKey<FormState>();
 
-  void _addMedicine(String name, String frequency) {
+  void _addMedicine(
+      String name, String frequency, List<String> times, List<String> days) {
     setState(() {
       if (_editingIndex == null) {
         _medicines.add({
           'name': name,
           'frequency': frequency,
+          'times': times,
+          'days': days,
         });
       } else {
         _medicines[_editingIndex!] = {
           'name': name,
           'frequency': frequency,
+          'times': times,
+          'days': days,
         };
         _editingIndex = null;
       }
     });
-    // Clear the text fields only if we're adding a new medicine
-    if (_editingIndex == null) {
-      _medicineNameController.clear();
-      _frequencyController.clear();
-    }
   }
 
   void _editMedicine(int index) {
     final medicine = _medicines[index];
-    _medicineNameController.text = medicine['name'] ?? '';
-    _frequencyController.text = medicine['frequency'] ?? '';
-    setState(() {
-      _editingIndex = index;
-    });
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: medicine['name']);
+    final frequencyController =
+        TextEditingController(text: medicine['frequency']);
+    final timesControllers = List.generate(
+        4, (i) => TextEditingController(text: medicine['times'][i]));
+    final days = medicine['days'].toList();
 
     showDialog(
       context: context,
@@ -51,47 +51,100 @@ class _AddMedicineState extends State<AddMedicine> {
         return AlertDialog(
           title: const Text('Edit Medicine'),
           content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextFormField(
-                  controller: _medicineNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Medicine Name',
-                    border: OutlineInputBorder(),
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Medicine Name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value!.isEmpty
+                        ? 'Please enter the medicine name'
+                        : null,
                   ),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Please enter the medicine name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _frequencyController,
-                  decoration: const InputDecoration(
-                    labelText: 'How often (e.g., 3 times per day)',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
+                    value: frequencyController.text.isNotEmpty
+                        ? frequencyController.text
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'How often',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: <String>[
+                      'More than once per day',
+                      'Once, multiple days a week',
+                    ].map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      frequencyController.text = value!;
+                    },
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Please select how often you take the medicine'
+                        : null,
                   ),
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Please enter how often you take the medicine';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                  if (frequencyController.text == 'More than once per day') ...[
+                    const SizedBox(height: 20),
+                    const Text('Specify up to 4 times:'),
+                    for (int i = 0; i < 4; i++)
+                      TextFormField(
+                        controller: timesControllers[i],
+                        decoration: InputDecoration(
+                          labelText: 'Time ${i + 1}',
+                          border: const OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.datetime,
+                      ),
+                  ],
+                  if (frequencyController.text ==
+                      'Once, multiple days a week') ...[
+                    const SizedBox(height: 20),
+                    const Text('Select days of the week:'),
+                    ...[
+                      'Monday',
+                      'Tuesday',
+                      'Wednesday',
+                      'Thursday',
+                      'Friday',
+                      'Saturday',
+                      'Sunday'
+                    ].map((day) {
+                      return CheckboxListTile(
+                        title: Text(day),
+                        value: days.contains(day),
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              days.add(day);
+                            } else {
+                              days.remove(day);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ],
+                ],
+              ),
             ),
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                if (_formKey.currentState?.validate() ?? false) {
+                if (formKey.currentState!.validate()) {
                   _addMedicine(
-                    _medicineNameController.text,
-                    _frequencyController.text,
+                    nameController.text,
+                    frequencyController.text,
+                    timesControllers.map((c) => c.text).toList(),
+                    days,
                   );
                   Navigator.of(context).pop();
                 }
@@ -149,8 +202,11 @@ class _AddMedicineState extends State<AddMedicine> {
                         },
                         child: Card(
                           child: ListTile(
-                            title: Text(medicine['name'] ?? ''),
-                            subtitle: Text(medicine['frequency'] ?? ''),
+                            title: Text(medicine['name']),
+                            subtitle: Text(
+                              '${medicine['frequency']}, Times:'
+                              '${(medicine['times'] as List<String>).where((time) => time.isNotEmpty).join(', ')}, Days: ${medicine['days'].join(', ')}',
+                            ),
                             trailing: IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () => _editMedicine(index),
@@ -181,27 +237,24 @@ class _AddMedicineState extends State<AddMedicine> {
               },
               icon: const Icon(Icons.medication),
               color: Colors.purple,
-              
             ),
           ],
         ),
       ),
       floatingActionButton: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            ManualAddButton(
-              onAdd: (name, frequency) {
-                _addMedicine(name, frequency);
-              },
-            ),
-            FloatingActionButton(
-              onPressed: () {
-                // Camera AI button action
-              },
-              child: const Icon(Icons.camera_alt_rounded),
-            ),
-          ],
-        ),
-      );
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          ManualAddButton(
+            onAdd: (name, frequency, times, days) {
+              _addMedicine(name, frequency, times, days);
+            },
+          ),
+          FloatingActionButton(
+            onPressed: () {},
+            child: const Icon(Icons.camera_alt_rounded),
+          ),
+        ],
+      ),
+    );
   }
 }
