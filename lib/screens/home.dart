@@ -20,6 +20,27 @@ class HomeScreen extends StatelessWidget {
           child: const Text('Add Medicine'),
         ),
       ),
+      bottomNavigationBar: BottomAppBar(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/home');
+              },
+              icon: Icon(Icons.home),
+              color: Colors.purple,
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/add_medicine');
+              },
+              icon: Icon(Icons.medication),
+            ),
+          ],
+        ),
+      ),
+    
     );
   }
 }
