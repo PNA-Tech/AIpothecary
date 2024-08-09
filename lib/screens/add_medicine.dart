@@ -11,7 +11,6 @@ class AddMedicine extends StatefulWidget {
 class _AddMedicineState extends State<AddMedicine> {
   final List<Map<String, dynamic>> _medicines = [];
   int? _editingIndex;
-  final _formKey = GlobalKey<FormState>();
 
   void _addMedicine(
       String name, String frequency, List<String> times, List<String> days) {
@@ -36,6 +35,9 @@ class _AddMedicineState extends State<AddMedicine> {
   }
 
   void _editMedicine(int index) {
+    setState(() {
+      _editingIndex = index;
+    });
     final medicine = _medicines[index];
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: medicine['name']);
@@ -43,121 +45,172 @@ class _AddMedicineState extends State<AddMedicine> {
         TextEditingController(text: medicine['frequency']);
     final timesControllers = List.generate(
         4, (i) => TextEditingController(text: medicine['times'][i]));
-    final days = medicine['days'].toList();
+    final days = List<String>.from(medicine['days']);
+    bool isMoreThanOncePerDay =
+        frequencyController.text == 'More than once per day';
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Medicine'),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Medicine Name',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) => value!.isEmpty
-                        ? 'Please enter the medicine name'
-                        : null,
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
-                    value: frequencyController.text.isNotEmpty
-                        ? frequencyController.text
-                        : null,
-                    decoration: const InputDecoration(
-                      labelText: 'How often',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: <String>[
-                      'More than once per day',
-                      'Once, multiple days a week',
-                    ].map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      frequencyController.text = value!;
-                    },
-                    validator: (value) => value == null || value.isEmpty
-                        ? 'Please select how often you take the medicine'
-                        : null,
-                  ),
-                  if (frequencyController.text == 'More than once per day') ...[
-                    const SizedBox(height: 20),
-                    const Text('Specify up to 4 times:'),
-                    for (int i = 0; i < 4; i++)
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Edit Medicine'),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
                       TextFormField(
-                        controller: timesControllers[i],
-                        decoration: InputDecoration(
-                          labelText: 'Time ${i + 1}',
-                          border: const OutlineInputBorder(),
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Medicine Name',
+                          border: OutlineInputBorder(),
                         ),
-                        keyboardType: TextInputType.datetime,
+                        validator: (value) => value!.isEmpty
+                            ? 'Please enter the medicine name'
+                            : null,
                       ),
-                  ],
-                  if (frequencyController.text ==
-                      'Once, multiple days a week') ...[
-                    const SizedBox(height: 20),
-                    const Text('Select days of the week:'),
-                    ...[
-                      'Monday',
-                      'Tuesday',
-                      'Wednesday',
-                      'Thursday',
-                      'Friday',
-                      'Saturday',
-                      'Sunday'
-                    ].map((day) {
-                      return CheckboxListTile(
-                        title: Text(day),
-                        value: days.contains(day),
-                        onChanged: (bool? value) {
+                      const SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        value: frequencyController.text.isNotEmpty
+                            ? frequencyController.text
+                            : null,
+                        decoration: const InputDecoration(
+                          labelText: 'How often',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: <String>[
+                          'More than once per day',
+                          'Once, multiple days a week',
+                        ].map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
                           setState(() {
-                            if (value == true) {
-                              days.add(day);
-                            } else {
-                              days.remove(day);
-                            }
+                            frequencyController.text = value!;
+                            isMoreThanOncePerDay =
+                                value == 'More than once per day';
                           });
                         },
-                      );
-                    }).toList(),
-                  ],
-                ],
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Please select how often you take the medicine'
+                            : null,
+                      ),
+                      if (isMoreThanOncePerDay) ...[
+                        const SizedBox(height: 20),
+                        const Text('Specify up to 4 times:'),
+                        for (int i = 0; i < 4; i++)
+                          TextFormField(
+                            controller: timesControllers[i],
+                            decoration: InputDecoration(
+                              labelText: 'Time ${i + 1}',
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.none,
+                            onTap: () {
+                              showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.now(),
+                              ).then((selectedTime) {
+                                if (selectedTime != null) {
+                                  timesControllers[i].text =
+                                      selectedTime.format(context);
+                                }
+                              });
+                            },
+                            validator: (value) {
+                              if (i == 0 && (value == null || value.isEmpty)) {
+                                return 'Please select at least one time';
+                              }
+                              return null;
+                            },
+                          ),
+                      ],
+                      if (!isMoreThanOncePerDay) ...[
+                        const SizedBox(height: 20),
+                        const Text('Select days of the week:'),
+                        ...[
+                          'Monday',
+                          'Tuesday',
+                          'Wednesday',
+                          'Thursday',
+                          'Friday',
+                          'Saturday',
+                          'Sunday'
+                        ].map((day) {
+                          return CheckboxListTile(
+                            title: Text(day),
+                            value: days.contains(day),
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  days.add(day);
+                                } else {
+                                  days.remove(day);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                        TextFormField(
+                          controller: timesControllers[0],
+                          decoration: const InputDecoration(
+                            labelText: 'Time',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.none,
+                          onTap: () {
+                            showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                            ).then((selectedTime) {
+                              if (selectedTime != null) {
+                                timesControllers[0].text =
+                                    selectedTime.format(context);
+                              }
+                            });
+                          },
+                          validator: (value) {
+                            if ((value == null || value.isEmpty)) {
+                              return 'Please select at least one time';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  _addMedicine(
-                    nameController.text,
-                    frequencyController.text,
-                    timesControllers.map((c) => c.text).toList(),
-                    days,
-                  );
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Save'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      _addMedicine(
+                        nameController.text,
+                        frequencyController.text,
+                        timesControllers.map((c) => c.text).toList(),
+                        days,
+                      );
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -178,6 +231,7 @@ class _AddMedicineState extends State<AddMedicine> {
                 ? Column(
                     children: List.generate(_medicines.length, (index) {
                       final medicine = _medicines[index];
+                      var value = medicine['frequency'];
                       return Dismissible(
                         key: Key(index.toString()),
                         direction: DismissDirection.endToStart,
@@ -204,9 +258,11 @@ class _AddMedicineState extends State<AddMedicine> {
                           child: ListTile(
                             title: Text(medicine['name']),
                             subtitle: Text(
-                              '${medicine['frequency']}, Times:'
-                              '${(medicine['times'] as List<String>).where((time) => time.isNotEmpty).join(', ')}, Days: ${medicine['days'].join(', ')}',
+                              '${medicine['frequency']}, Times: '
+                                '${(value == 'Once, multiple days a week') ? (medicine['times'][0]) : (medicine['times'] as List<String>).where((time) => time.isNotEmpty).join(', ')}, '
+                                '${(value == 'Once, multiple days a week') ? (medicine['days'] as List<String>).join(', ') : ''}',
                             ),
+                            
                             trailing: IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () => _editMedicine(index),
