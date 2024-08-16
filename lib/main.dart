@@ -48,7 +48,7 @@ class _MyAppState extends State<MyApp> {
         '/signup': (context) => SignUpScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => HomeScreen(name: _userName),
-        '/add_medicine': (context) => const AddMedicine(),
+        '/add_medicine': (context) =>  AddMedicine(authService: AuthService(),),
       },
     );
   }

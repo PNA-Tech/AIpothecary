@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:healthassistant/util/auth.dart';
 import 'package:healthassistant/widgets/manual_btn.dart';
 
 class AddMedicine extends StatefulWidget {
-  const AddMedicine({super.key});
+  const AddMedicine({super.key, required AuthService authService});
 
   @override
   _AddMedicineState createState() => _AddMedicineState();
@@ -303,7 +304,7 @@ class _AddMedicineState extends State<AddMedicine> {
           ManualAddButton(
             onAdd: (name, frequency, times, days) {
               _addMedicine(name, frequency, times, days);
-            },
+            }, authService: AuthService(),
           ),
           FloatingActionButton(
             onPressed: () {},

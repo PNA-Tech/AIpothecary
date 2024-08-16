@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:healthassistant/util/auth.dart';
+import 'package:pocketbase/pocketbase.dart';
+
 
 class ManualAddButton extends StatelessWidget {
+  final pb = PocketBase('https://region-generally.pockethost.io/');
+  final AuthService authService;
   final Function(
-          String name, String frequency, List<String> times, List<String> days)
-      onAdd;
+    String name,
+    String frequency,
+    List<String> times,
+    List<String> days,
+  ) onAdd;
+  final String? userId; 
 
-  const ManualAddButton({super.key, required this.onAdd});
+   ManualAddButton({
+    super.key,
+    required this.authService,
+    required this.onAdd,
+    this.userId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +34,7 @@ class ManualAddButton extends StatelessWidget {
     );
   }
 
-  void _showAddMedicineDialog(BuildContext context) {
+  void _showAddMedicineDialog(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final medicineNameController = TextEditingController();
     final frequencyController =
@@ -155,7 +169,7 @@ class ManualAddButton extends StatelessWidget {
                             });
                           },
                           validator: (value) {
-                            if ((value == null || value.isEmpty)) {
+                            if (value == null || value.isEmpty) {
                               return 'Please select at least one time';
                             }
                             return null;
@@ -168,7 +182,7 @@ class ManualAddButton extends StatelessWidget {
               ),
               actions: <Widget>[
                 TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       if (daysController.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -179,15 +193,40 @@ class ManualAddButton extends StatelessWidget {
                           ),
                         );
                       } else {
-                        onAdd(
-                          medicineNameController.text,
-                          frequencyController.text,
-                          timesController.map((c) => c.text).toList(),
-                          List<String>.from(daysController),
-                        );
+                        try {
+                          final body = <String, dynamic>{
+                            "name": medicineNameController.text,
+                            "frequency": frequencyController.text,
+                            "time_of_day":
+                                timesController.map((c) => c.text).toList(),
+                            "days_of_week": List<String>.from(daysController),
+                            "userId": userId 
+                          };
+
+                          final record = await pb
+                              .collection('medicines')
+                              .create(body: body);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Medicine added successfully.'),
+                            ),
+                          );
+                          onAdd(
+                            medicineNameController.text,
+                            frequencyController.text,
+                            timesController.map((c) => c.text).toList(),
+                            List<String>.from(daysController),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to add medicine: $e'),
+                            ),
+                          );
+                        }
                       }
-                    } else {}
-                    Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    }
                   },
                   child: const Text('Add'),
                 ),
