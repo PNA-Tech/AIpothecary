@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthassistant/screens/add_medicine.dart';
 import 'package:healthassistant/util/auth.dart';
+import 'package:healthassistant/util/globals.dart';
 import 'package:healthassistant/widgets/manual_btn.dart';
 import 'package:pocketbase/pocketbase.dart';
 import '../screens/home.dart';
@@ -29,12 +30,12 @@ class _LoginScreenState extends State<LoginScreen> {
         final user = authResponse.record;
         final userName = user?.getStringValue('name') ?? 'User';
         final userId = user?.id; 
+        print(userId);
+        globalUserId = userId!;
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomeScreen(name: userName)),
-          result: MaterialPageRoute(builder: (context) => ManualAddButton(userId: userId, authService: AuthService(), onAdd: (String name, String frequency, List<String> times, List<String> days) {  },)),
-        );
+          MaterialPageRoute(builder: (context) => HomeScreen(name: userName)),);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),

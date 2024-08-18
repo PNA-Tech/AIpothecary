@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthassistant/util/auth.dart';
+import 'package:healthassistant/util/globals.dart';
 import 'package:pocketbase/pocketbase.dart';
 
 
@@ -194,13 +195,14 @@ class ManualAddButton extends StatelessWidget {
                         );
                       } else {
                         try {
+                          print(globalUserId);
                           final body = <String, dynamic>{
                             "name": medicineNameController.text,
                             "frequency": frequencyController.text,
                             "time_of_day":
                                 timesController.map((c) => c.text).toList(),
                             "days_of_week": List<String>.from(daysController),
-                            "userId": userId 
+                            "userId": globalUserId, 
                           };
 
                           final record = await pb
