@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthassistant/util/auth.dart';
 import 'package:healthassistant/util/globals.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:healthassistant/widgets/medicines.dart';
 
 
 class ManualAddButton extends StatelessWidget {
@@ -185,7 +186,7 @@ class ManualAddButton extends StatelessWidget {
                 TextButton(
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      if (daysController.isEmpty) {
+                      if (daysController.isEmpty && frequencyController.text == 'Once, multiple days a week') {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
@@ -219,6 +220,12 @@ class ManualAddButton extends StatelessWidget {
                             timesController.map((c) => c.text).toList(),
                             List<String>.from(daysController),
                           );
+                          setState(() {
+                            medicineNameController.clear();
+                            frequencyController.clear();
+                            timesController.forEach((c) => c.clear());
+                            daysController.clear();
+                          });
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

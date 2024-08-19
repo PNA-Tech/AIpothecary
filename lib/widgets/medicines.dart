@@ -18,13 +18,227 @@ class _MedicinesWidgetState extends State<MedicinesWidget> {
 
   Future<void> _fetchMedicines() async {
     try {
-      final records = await pb.collection('medicines').getFullList(sort: '-created');
+      final records =
+          await pb.collection('medicines').getFullList(sort: '-created');
       setState(() {
         _medicines = records;
       });
     } catch (e) {
       print("Error fetching medicines: $e");
     }
+  }
+
+  Future<void> _editMedicine(
+      BuildContext context, String recordId, RecordModel medicineRecord) async {
+    final formKey = GlobalKey<FormState>();
+    final medicineNameController =
+        TextEditingController(text: medicineRecord.data['name']);
+    final frequencyController =
+        TextEditingController(text: medicineRecord.data['frequency']);
+    final timesController = List<TextEditingController>.from(
+      (medicineRecord.data['time_of_day'] as List<dynamic>)
+          .map((time) => TextEditingController(text: time)),
+    );
+    final Set<String> daysController =
+        Set<String>.from(medicineRecord.data['days_of_week'] as List<dynamic>);
+    bool isMoreThanOncePerDay =
+        frequencyController.text == 'More than once per day';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Edit Medicine'),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      TextFormField(
+                        controller: medicineNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Medicine Name',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter the medicine name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        value: frequencyController.text,
+                        decoration: const InputDecoration(
+                          labelText: 'How often',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: <String>[
+                          'More than once per day',
+                          'Once, multiple days a week',
+                        ].map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            frequencyController.text = value!;
+                            isMoreThanOncePerDay =
+                                value == 'More than once per day';
+                          });
+                        },
+                      ),
+                      if (isMoreThanOncePerDay) ...[
+                        const SizedBox(height: 20),
+                        const Text('Specify up to 4 times:'),
+                        for (int i = 0; i < 4; i++)
+                          TextFormField(
+                            controller: i < timesController.length
+                                ? timesController[i]
+                                : TextEditingController(),
+                            decoration: InputDecoration(
+                              labelText: 'Time ${i + 1}',
+                              border: const OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.datetime,
+                            onTap: () {
+                              showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.now(),
+                              ).then((selectedTime) {
+                                if (selectedTime != null) {
+                                  timesController[i].text =
+                                      selectedTime.format(context);
+                                }
+                              });
+                            },
+                            validator: (value) {
+                              if (i == 0 && (value == null || value.isEmpty)) {
+                                return 'Please select at least one time';
+                              }
+                              return null;
+                            },
+                          ),
+                      ],
+                      if (!isMoreThanOncePerDay) ...[
+                        const SizedBox(height: 20),
+                        const Text('Select days of the week:'),
+                        ...[
+                          'Monday',
+                          'Tuesday',
+                          'Wednesday',
+                          'Thursday',
+                          'Friday',
+                          'Saturday',
+                          'Sunday'
+                        ].map((day) {
+                          return CheckboxListTile(
+                            title: Text(day),
+                            value: daysController.contains(day),
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  daysController.add(day);
+                                } else {
+                                  daysController.remove(day);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                        TextFormField(
+                          controller: timesController.isNotEmpty
+                              ? timesController[0]
+                              : TextEditingController(),
+                          decoration: const InputDecoration(
+                            labelText: 'Time',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.datetime,
+                          onTap: () {
+                            showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                            ).then((selectedTime) {
+                              if (selectedTime != null) {
+                                timesController[0].text =
+                                    selectedTime.format(context);
+                              }
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select at least one time';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      if (daysController.isEmpty &&
+                          frequencyController.text ==
+                              'Once, multiple days a week') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Please select at least one day of the week.')),
+                        );
+                      } else {
+                        try {
+                          final body = <String, dynamic>{
+                            "name": medicineNameController.text,
+                            "frequency": frequencyController.text,
+                            "time_of_day":
+                                timesController.map((c) => c.text).toList(),
+                            "days_of_week": List<String>.from(daysController),
+                          };
+
+                          await pb
+                              .collection('medicines')
+                              .update(recordId, body: body);
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Medicine updated successfully.')),
+                          );
+                          Navigator.of(context).pop(); // Close the dialog
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Failed to update medicine: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close the dialog
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _deleteMedicine(String recordId, int index) async {
@@ -45,45 +259,54 @@ class _MedicinesWidgetState extends State<MedicinesWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        _medicines.isNotEmpty
-            ? Column(
-                children: List.generate(_medicines.length, (index) {
-                  final medicine = _medicines[index];
-                  
-                  // Check for null values
-                  var frequency = medicine.data['frequency'] ?? '';
-                  var times = (medicine.data['times'] as List<dynamic>?)?.where((time) => time != null && time.isNotEmpty).toList() ?? [];
-                  var days = (medicine.data['days'] as List<dynamic>?)?.where((day) => day != null && day.isNotEmpty).toList() ?? [];
+        if (_medicines.isNotEmpty)
+          Column(
+            children: List.generate(_medicines.length, (index) {
+              final medicine = _medicines[index];
+              var frequency = medicine.data['frequency'] ?? '';
+              var times = (medicine.data['time_of_day'] as List<dynamic>?)
+                      ?.where((time) => time != null && time.isNotEmpty)
+                      .toList() ??
+                  [];
+              var days = frequency == 'Once, multiple days a week'
+                  ? (medicine.data['days_of_week'] as List<dynamic>?)
+                          ?.where((day) => day != null && day.isNotEmpty)
+                          .toList() ??
+                      []
+                  : ["Everyday"];
 
-                  return Dismissible(
-                    key: Key(medicine.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
-                        color: Colors.red,
-                      ),
-                      alignment: Alignment.centerRight,
-                      child: const Icon(Icons.delete, color: Colors.white),
+              return Dismissible(
+                key: Key(medicine.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    color: Colors.red,
+                  ),
+                  alignment: Alignment.centerRight,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (direction) => _deleteMedicine(medicine.id, index),
+                child: Card(
+                  child: ListTile(
+                    title: Text(medicine.data['name'] ?? 'Unknown Medicine'),
+                    subtitle: Text(
+                      '$frequency, Times: ${times.join(', ')}, ${days.join(', ')}',
                     ),
-                    onDismissed: (direction) => _deleteMedicine(medicine.id, index),
-                    child: Card(
-                      child: ListTile(
-                        title: Text(medicine.data['name'] ?? 'Unknown Medicine'),
-                        subtitle: Text(
-                          '$frequency, Times: ${times.join(', ')}, Days: ${days.join(', ')}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () {},
-                        ),
-                      ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () {
+                        _editMedicine(context, medicine.id, medicine);
+                      },
                     ),
-                  );
-                }),
-              )
-            : const Text('Add some medicines by using the buttons below.'),
+                  ),
+                ),
+              );
+            }),
+          )
+        else
+          const Text('Add some medicines by using the buttons below.'),
         const SizedBox(height: 20),
       ],
     );
