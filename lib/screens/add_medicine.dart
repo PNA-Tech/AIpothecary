@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:healthassistant/util/auth.dart';
 import 'package:healthassistant/widgets/manual_btn.dart';
+import 'package:healthassistant/widgets/medicines.dart';
+import 'package:pocketbase/pocketbase.dart';
 
 class AddMedicine extends StatefulWidget {
   const AddMedicine({super.key, required AuthService authService});
@@ -10,6 +12,7 @@ class AddMedicine extends StatefulWidget {
 }
 
 class _AddMedicineState extends State<AddMedicine> {
+  final pb = PocketBase('https://region-generally.pockethost.io');
   final List<Map<String, dynamic>> _medicines = [];
   int? _editingIndex;
 
@@ -228,53 +231,7 @@ class _AddMedicineState extends State<AddMedicine> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: <Widget>[
-            (_medicines.isNotEmpty)
-                ? Column(
-                    children: List.generate(_medicines.length, (index) {
-                      final medicine = _medicines[index];
-                      var value = medicine['frequency'];
-                      return Dismissible(
-                        key: Key(index.toString()),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: Colors.red,
-                          ),
-                          alignment: Alignment.centerRight,
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        onDismissed: (direction) {
-                          setState(() {
-                            _medicines.removeAt(index);
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Medicine deleted'),
-                            ),
-                          );
-                        },
-                        child: Card(
-                          child: ListTile(
-                            title: Text(medicine['name']),
-                            subtitle: Text(
-                              '${medicine['frequency']}, Times: '
-                                '${(value == 'Once, multiple days a week') ? (medicine['times'][0]) : (medicine['times'] as List<String>).where((time) => time.isNotEmpty).join(', ')}, '
-                                '${(value == 'Once, multiple days a week') ? (medicine['days'] as List<String>).join(', ') : ''}',
-                            ),
-                            
-                            trailing: IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _editMedicine(index),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  )
-                : const Text('Add some medicines by using the buttons below.'),
-            const SizedBox(height: 20),
+            MedicinesWidget(),
           ],
         ),
       ),

@@ -39,6 +39,8 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Health Assistant',
+      debugShowCheckedModeBanner: false,
       home: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _isAuthenticated
