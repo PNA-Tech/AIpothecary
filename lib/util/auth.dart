@@ -24,11 +24,19 @@ class AuthService {
   }
 
   Future<String?> getCurrentUserId() async {
+    if (!pb.authStore.isValid) {
+      print('User is not authenticated');
+      return null;
+    }
     final user = pb.authStore.model;
     return user?.id;
   }
 
   Future<String?> getCurrentUserName() async {
+    if (!pb.authStore.isValid) {
+      print('User is not authenticated');
+      return null;
+    }
     final user = pb.authStore.model;
     return user?.getString('name');
   }

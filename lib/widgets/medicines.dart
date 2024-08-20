@@ -1,50 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:healthassistant/util/auth.dart';
-import 'package:healthassistant/util/globals.dart';
 import 'package:pocketbase/pocketbase.dart';
-import 'package:healthassistant/widgets/medicines.dart';
 
+class MedicinesWidget extends StatefulWidget {
+  @override
+  _MedicinesWidgetState createState() => _MedicinesWidgetState();
+}
 
-class ManualAddButton extends StatelessWidget {
-  final pb = PocketBase('https://region-generally.pockethost.io/');
-  final AuthService authService;
-  final Function(
-    String name,
-    String frequency,
-    List<String> times,
-    List<String> days,
-  ) onAdd;
-  final String? userId; 
-
-   ManualAddButton({
-    super.key,
-    required this.authService,
-    required this.onAdd,
-    this.userId,
-  });
+class _MedicinesWidgetState extends State<MedicinesWidget> {
+  final PocketBase pb = PocketBase('https://region-generally.pockethost.io');
+  List<RecordModel> _medicines = [];
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 30),
-      child: FloatingActionButton(
-        onPressed: () {
-          _showAddMedicineDialog(context);
-        },
-        child: const Icon(Icons.add),
-      ),
-    );
+  void initState() {
+    super.initState();
+    _fetchMedicines(); // Fetch medicines on widget initialization
   }
 
-  void _showAddMedicineDialog(BuildContext context) async {
+  Future<void> _fetchMedicines() async {
+    try {
+      final records =
+          await pb.collection('medicines').getFullList(sort: '-created');
+      setState(() {
+        _medicines = records;
+      });
+    } catch (e) {
+      print("Error fetching medicines: $e");
+    }
+  }
+
+  Future<void> _editMedicine(
+      BuildContext context, String recordId, RecordModel medicineRecord) async {
     final formKey = GlobalKey<FormState>();
-    final medicineNameController = TextEditingController();
+    final medicineNameController =
+        TextEditingController(text: medicineRecord.data['name']);
     final frequencyController =
-        TextEditingController(text: 'Once, multiple days a week');
-    final timesController =
-        List.generate(4, (index) => TextEditingController());
-    final Set<String> daysController = <String>{};
-    bool isMoreThanOncePerDay = false;
+        TextEditingController(text: medicineRecord.data['frequency']);
+    final timesController = List<TextEditingController>.from(
+      (medicineRecord.data['time_of_day'] as List<dynamic>)
+          .map((time) => TextEditingController(text: time)),
+    );
+    final Set<String> daysController =
+        Set<String>.from(medicineRecord.data['days_of_week'] as List<dynamic>);
+    bool isMoreThanOncePerDay =
+        frequencyController.text == 'More than once per day';
 
     showDialog(
       context: context,
@@ -52,7 +50,7 @@ class ManualAddButton extends StatelessWidget {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             return AlertDialog(
-              title: const Text('Add Medicine'),
+              title: const Text('Edit Medicine'),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -101,7 +99,9 @@ class ManualAddButton extends StatelessWidget {
                         const Text('Specify up to 4 times:'),
                         for (int i = 0; i < 4; i++)
                           TextFormField(
-                            controller: timesController[i],
+                            controller: i < timesController.length
+                                ? timesController[i]
+                                : TextEditingController(),
                             decoration: InputDecoration(
                               labelText: 'Time ${i + 1}',
                               border: const OutlineInputBorder(),
@@ -153,7 +153,9 @@ class ManualAddButton extends StatelessWidget {
                           );
                         }).toList(),
                         TextFormField(
-                          controller: timesController[0],
+                          controller: timesController.isNotEmpty
+                              ? timesController[0]
+                              : TextEditingController(),
                           decoration: const InputDecoration(
                             labelText: 'Time',
                             border: OutlineInputBorder(),
@@ -186,62 +188,48 @@ class ManualAddButton extends StatelessWidget {
                 TextButton(
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      if (daysController.isEmpty && frequencyController.text == 'Once, multiple days a week') {
+                      if (daysController.isEmpty &&
+                          frequencyController.text ==
+                              'Once, multiple days a week') {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'The medicine was not added. Please select at least one day of the week.',
-                            ),
-                          ),
+                              content: Text(
+                                  'Please select at least one day of the week.')),
                         );
                       } else {
                         try {
-                          print(globalUserId);
                           final body = <String, dynamic>{
                             "name": medicineNameController.text,
                             "frequency": frequencyController.text,
                             "time_of_day":
                                 timesController.map((c) => c.text).toList(),
                             "days_of_week": List<String>.from(daysController),
-                            "userId": globalUserId, 
                           };
 
-                          final record = await pb
+                          await pb
                               .collection('medicines')
-                              .create(body: body);
+                              .update(recordId, body: body);
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Medicine added successfully.'),
-                            ),
+                                content:
+                                    Text('Medicine updated successfully.')),
                           );
-                          onAdd(
-                            medicineNameController.text,
-                            frequencyController.text,
-                            timesController.map((c) => c.text).toList(),
-                            List<String>.from(daysController),
-                          );
-                          setState(() {
-                            medicineNameController.clear();
-                            frequencyController.clear();
-                            timesController.forEach((c) => c.clear());
-                            daysController.clear();
-                          });
+                          Navigator.of(context).pop(); // Close the dialog
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Failed to add medicine: $e'),
-                            ),
+                                content: Text('Failed to update medicine: $e')),
                           );
                         }
                       }
-                      Navigator.of(context).pop();
                     }
                   },
-                  child: const Text('Add'),
+                  child: const Text('Update'),
                 ),
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(); // Close the dialog
                   },
                   child: const Text('Cancel'),
                 ),
@@ -250,6 +238,77 @@ class ManualAddButton extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Future<void> _deleteMedicine(String recordId, int index) async {
+    try {
+      await pb.collection('medicines').delete(recordId);
+      setState(() {
+        _medicines.removeAt(index);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Medicine deleted')),
+      );
+    } catch (e) {
+      print("Error deleting medicine: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        if (_medicines.isNotEmpty)
+          Column(
+            children: List.generate(_medicines.length, (index) {
+              final medicine = _medicines[index];
+              var frequency = medicine.data['frequency'] ?? '';
+              var times = (medicine.data['time_of_day'] as List<dynamic>?)
+                      ?.where((time) => time != null && time.isNotEmpty)
+                      .toList() ??
+                  [];
+              var days = frequency == 'Once, multiple days a week'
+                  ? (medicine.data['days_of_week'] as List<dynamic>?)
+                          ?.where((day) => day != null && day.isNotEmpty)
+                          .toList() ??
+                      []
+                  : ["Everyday"];
+
+              return Dismissible(
+                key: Key(medicine.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5),
+                    color: Colors.red,
+                  ),
+                  alignment: Alignment.centerRight,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (direction) => _deleteMedicine(medicine.id, index),
+                child: Card(
+                  child: ListTile(
+                    title: Text(medicine.data['name'] ?? 'Unknown Medicine'),
+                    subtitle: Text(
+                      '$frequency, Times: ${times.join(', ')}, ${days.join(', ')}',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () {
+                        _editMedicine(context, medicine.id, medicine);
+                      },
+                    ),
+                  ),
+                ),
+              );
+            }),
+          )
+        else
+          const Text('Add some medicines by using the buttons below.'),
+        const SizedBox(height: 20),
+      ],
     );
   }
 }
