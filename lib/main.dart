@@ -1,6 +1,8 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:healthassistant/screens/add_medicine.dart';
 import 'package:healthassistant/screens/home.dart';
+import 'package:healthassistant/widgets/camera.dart';
 import 'package:healthassistant/widgets/login.dart';
 import 'package:healthassistant/widgets/signup.dart';
 import 'package:healthassistant/util/auth.dart';
@@ -50,7 +52,10 @@ class _MyAppState extends State<MyApp> {
         '/signup': (context) => SignUpScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => HomeScreen(name: _userName),
-        '/add_medicine': (context) =>  AddMedicine(authService: AuthService(),),
+        '/add_medicine': (context) => AddMedicine(
+              authService: AuthService(),
+            ),
+        '/camera': (context) => ScannerScreen(),
       },
     );
   }

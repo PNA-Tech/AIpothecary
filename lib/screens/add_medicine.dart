@@ -261,10 +261,13 @@ class _AddMedicineState extends State<AddMedicine> {
           ManualAddButton(
             onAdd: (name, frequency, times, days) {
               _addMedicine(name, frequency, times, days);
-            }, authService: AuthService(),
+            },
+            authService: AuthService(),
           ),
           FloatingActionButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushNamed(context, "/camera");
+            },
             child: const Icon(Icons.camera_alt_rounded),
           ),
         ],
