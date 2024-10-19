@@ -37,10 +37,15 @@ class HomeScreen extends StatelessWidget {
               },
               icon: Icon(Icons.medication),
             ),
+            IconButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/chat');
+              },
+              icon: Icon(Icons.chat),
+            ),
           ],
         ),
       ),
-    
     );
   }
 }
