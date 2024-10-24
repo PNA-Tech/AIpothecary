@@ -1,4 +1,4 @@
-# healthassistant
+# AIpothecary
 
 A new Flutter project.
 
