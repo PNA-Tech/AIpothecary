@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 
 class MedicinesWidget extends StatefulWidget {
   @override
@@ -9,11 +12,60 @@ class MedicinesWidget extends StatefulWidget {
 class _MedicinesWidgetState extends State<MedicinesWidget> {
   final PocketBase pb = PocketBase('https://region-generally.pockethost.io');
   List<RecordModel> _medicines = [];
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
+    _initializeNotifications(); // Set up notifications
     _fetchMedicines(); // Fetch medicines on widget initialization
+  }
+
+  // Initialize local notifications
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+    // Initialize timezone data
+    tz.initializeTimeZones();
+  }
+
+  Future<void> _scheduleNotification(String medicineName, String time) async {
+    var timeParts = time.split(':');
+    int hour = int.parse(timeParts[0]);
+    int minute = int.parse(timeParts[1].split(' ')[0]);
+    String period = timeParts[1].split(' ')[1];
+
+    // Convert to 24-hour format
+    if (period == "PM" && hour != 12) hour += 12;
+    if (period == "AM" && hour == 12) hour = 0;
+
+    final now = DateTime.now();
+    final scheduleTime = DateTime(now.year, now.month, now.day, hour, minute);
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0, // Notification ID
+      'Time to take your medicine',
+      'Please take your $medicineName',
+      tz.TZDateTime.from(scheduleTime, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'your_channel_id', // Channel ID
+          'your_channel_name', // Channel Name
+          channelDescription: 'your_channel_description',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+      androidAllowWhileIdle: true,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time, // Daily notifications
+    );
   }
 
   Future<void> _fetchMedicines() async {
@@ -209,6 +261,15 @@ class _MedicinesWidgetState extends State<MedicinesWidget> {
                           await pb
                               .collection('medicines')
                               .update(recordId, body: body);
+
+                          // Schedule notification for the medicine
+                          for (final timeController in timesController) {
+                            if (timeController.text.isNotEmpty) {
+                              await _scheduleNotification(
+                                  medicineNameController.text,
+                                  timeController.text);
+                            }
+                          }
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
